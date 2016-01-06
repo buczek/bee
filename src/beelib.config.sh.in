@@ -313,7 +313,7 @@ function config_verify_builtin_prefixes() {
     : ${EPREFIX:='${PREFIX}'}
     : ${BINDIR:='${EPREFIX}/bin'}
     : ${SBINDIR:='${EPREFIX}/sbin'}
-    : ${LIBEXECDIR:='${EPREFIX}/lib/${PKGNAME}'}
+    : ${LIBEXECDIR:='${EPREFIX}/libexec'}
     : ${SYSCONFDIR:=DEFAULT}
     : ${LOCALSTATEDIR:=DEFAULT}
     : ${SHAREDSTATEDIR:='${LOCALSTATEDIR}'}
