@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <errno.h>
 
 #include "bee_version.h"
 #include "bee_version_parse.h"
@@ -110,10 +111,78 @@ void print_full_usage(void) {
     
 }
 
-int parse_argument(char* text, struct beeversion *versionsnummer)
-{	
+static int ends_with(char *string,char *postfix)
+{
+    size_t string_len;
+    size_t postfix_len;
+
+    string_len=strlen(string);
+    postfix_len=strlen(postfix);
+
+    if (postfix_len<=string_len) {
+        return strcmp(&string[string_len-postfix_len],postfix)==0;
+    }
+    return 0;
+}
+
+int scan_be0_version(char *filename,struct beeversion *versionsnummer)
+{
+    FILE *file=NULL;
+    char *line=NULL;
+    size_t linebufsize=0;
+    int ok=0;
+    int next;
+    int lineno=0;
     int p;
-    
+    char *version=NULL;
+
+    file=fopen(filename,"r");
+    if (!file) {
+        perror(filename);
+        goto out;
+    }
+    while(1) {
+        if (getline(&line,&linebufsize,file)<0) {
+            if(errno) {
+                perror(filename);
+            } else {
+                fprintf(stderr,"%s : BEE_VERSION missing from file\n",filename);
+            }
+            goto out;
+        }
+        lineno++;
+        sscanf(line," # BEE_VERSION%ms %n",&version,&next);
+        if (version) {
+            if (line[next] != '\n' && line[next] != '\0') {
+                fprintf(stderr,"%s line %d : syntax error (too many words after BEE_VERSION)\n",filename,lineno);
+                goto out;
+            }
+            if((p=parse_version(version, versionsnummer))) {
+                fprintf(stderr, "%s line %d :  syntax error at position %d in '%s'\n",filename,lineno,p,version);
+                goto out;
+            }
+            ok=1;
+            goto out;
+        }
+    }
+out:
+    if (version)
+        free(version);
+    if (line)
+        free(line);
+    if (file)
+        fclose(file);
+    return ok ? 1 : 0;
+}
+
+int parse_argument(char* text, struct beeversion *versionsnummer)
+{
+    int p;
+
+    if (ends_with(text,".be0")) {
+        return scan_be0_version(text,versionsnummer);
+    }
+
     if((p=parse_version(text, versionsnummer))) {
         fprintf(stderr, "beeversion: syntax error at position %d in '%s'\n", p, text);
         return(0);
